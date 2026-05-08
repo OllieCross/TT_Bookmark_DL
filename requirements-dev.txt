@@ -1,0 +1,9 @@
+-r requirements.txt
+
+black>=24.4.0
+flake8>=7.1.0
+isort>=5.13.0
+mypy>=1.10.0
+pre-commit>=3.7.0
+types-requests>=2.31.0
+types-beautifulsoup4>=4.12.0

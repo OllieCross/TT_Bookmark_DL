@@ -1,0 +1,9 @@
+services:
+  downloader:
+    build: .
+    stdin_open: true   # needed for input() prompt
+    tty: true
+    volumes:
+      # Drop your TikTok JSON export here and output lands here too
+      - .:/app
+    working_dir: /app

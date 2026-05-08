@@ -1,0 +1,12 @@
+.git/
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+TikTokVideos/
+TikTokImages/
+failed_downloads.txt
+*.json
+.DS_Store
+.env
