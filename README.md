@@ -1,10 +1,11 @@
 # TikTok Bookmark Downloader
 
-Downloads all bookmarked TikTok videos and photo slideshows from a TikTok data export JSON file.
+Downloads all bookmarked TikTok videos and photo slideshows from a TikTok data export JSON file or a plain `.txt` list of links.
 
 ## What it does
 
 - Parses your TikTok data export JSON (supports all known export formats)
+- Or reads a `.txt` file with one link per line - any TikTok link type works: `vm.tiktok.com/...`, `vt.tiktok.com/...`, `tiktok.com/t/...`, `tiktok.com/@user/video/ID`, `tiktok.com/@user/photo/ID`. Short links are resolved via redirect; blank lines and duplicates are ignored
 - Reconstructs valid TikTok URLs from raw export links
 - Downloads videos as `{id}.mp4` and slideshow images as `{id}.jpg` / `{id}_1.jpg`, `{id}_2.jpg`, ...
 - **Stateful** - scans existing output folders on each run and skips already-downloaded content; safe to re-run with an updated JSON export
@@ -35,7 +36,7 @@ make install-dev
 
 ```bash
 python downloader.py
-# Enter JSON filename: user_data_tiktok.json
+# Enter JSON or TXT filename: user_data_tiktok.json   (or links.txt)
 ```
 
 ### Docker

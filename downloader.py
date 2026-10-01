@@ -18,6 +18,18 @@ def extract_tiktok_id(url):
     return match.group(1) if match else None
 
 
+def resolve_short_url(url, session):
+    """Follow redirects (vm.tiktok.com, vt.tiktok.com, tiktok.com/t/...) to the full URL."""
+    try:
+        r = session.get(url, allow_redirects=True, stream=True, timeout=30)
+        final = r.url
+        r.close()
+        return final
+    except requests.exceptions.RequestException as e:
+        print(f"  Could not resolve short link: {e}")
+        return None
+
+
 def get_downloaded_ids():
     """Scan output folders and return set of already-downloaded TikTok IDs."""
     downloaded = set()
@@ -143,10 +155,38 @@ def load_urls_from_json(json_path):
     sys.exit(1)
 
 
+URL_PATTERN = re.compile(r'https?://[^\s"\'<>,]+')
+
+
+def load_urls_from_txt(txt_path):
+    """Read one or more TikTok links per line (any link format); skip blanks and duplicates."""
+    with open(txt_path, "r", encoding="utf-8") as f:
+        text = f.read()
+    seen = set()
+    urls = []
+    for url in URL_PATTERN.findall(text):
+        if "tiktok" not in url.lower():
+            continue
+        if url not in seen:
+            seen.add(url)
+            urls.append(url)
+    if not urls:
+        print(f"No TikTok links found in {txt_path}")
+        sys.exit(1)
+    return urls
+
+
+def load_urls(path):
+    """Load URLs from a .json (TikTok data export) or .txt (list of links) file."""
+    if path.lower().endswith(".json"):
+        return load_urls_from_json(path)
+    return load_urls_from_txt(path)
+
+
 def main():
-    json_file = input("Enter JSON filename: ").strip()
-    if not os.path.exists(json_file):
-        print(f"File not found: {json_file}")
+    input_file = input("Enter JSON or TXT filename: ").strip()
+    if not os.path.exists(input_file):
+        print(f"File not found: {input_file}")
         sys.exit(1)
 
     os.makedirs(VIDEOS_FOLDER, exist_ok=True)
@@ -154,9 +194,10 @@ def main():
 
     downloaded_ids = get_downloaded_ids()
 
-    urls = load_urls_from_json(json_file)
+    urls = load_urls(input_file)
     total = len(urls)
 
+    # Links with an ID in the URL can be filtered now; short links are resolved later.
     pending = []
     for url in urls:
         tiktok_id = extract_tiktok_id(url)
@@ -165,7 +206,7 @@ def main():
         pending.append((url, tiktok_id))
 
     skipped = total - len(pending)
-    print(f"Bookmarks in JSON : {total}")
+    print(f"Links in file     : {total}")
     print(f"Already downloaded: {skipped}")
     print(f"To download       : {len(pending)}\n")
 
@@ -179,12 +220,21 @@ def main():
         for i, (url, tiktok_id) in enumerate(pending, start=1):
             print(f"[{i}/{len(pending)}] {url}")
             if not tiktok_id:
-                print("  Could not extract ID from URL, skipping")
-                failed.append(url)
-                continue
+                resolved = resolve_short_url(url, session)
+                tiktok_id = extract_tiktok_id(resolved) if resolved else None
+                if not tiktok_id:
+                    print("  Could not extract ID from URL, skipping")
+                    failed.append(url)
+                    continue
+                if tiktok_id in downloaded_ids:
+                    print(f"  Already downloaded: {tiktok_id}")
+                    continue
+                url = resolved
 
             success = download_content(url, session, tiktok_id)
-            if not success:
+            if success:
+                downloaded_ids.add(tiktok_id)
+            else:
                 failed.append(url)
 
             if i < len(pending):
